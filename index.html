@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老师课表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 60%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 30px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            text-align: left;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #a6fdc3 0%, #38f9d7 100%);
+            color: rgb(0, 0, 0);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 233, 123, 0.5);
+        }
+
+        .add-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .week-section {
+            padding: 20px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .week-section:last-child {
+            border-bottom: none;
+        }
+
+        .week-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .week-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .schedule-table {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .schedule-row {
+            display: table-row;
+        }
+
+        .schedule-header-row {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+        }
+
+        .schedule-cell {
+            display: table-cell;
+            padding: 12px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: top;
+        }
+
+        .schedule-header-row .schedule-cell {
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: #555;
+            padding: 15px 8px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .time-cell {
+            width: 120px;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
+            text-align: center;
+            font-weight: 600;
+            color: #444;
+            font-size: 14px;
+        }
+
+        .day-cell {
+            min-width: 100px;
+            min-height: 90px;
+            position: relative;
+        }
+
+        .day-cell.empty {
+            background: #fafafa;
+        }
+
+        .course-card {
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .course-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.45);
+        }
+
+        .course-card.slot1 {
+            background: linear-gradient(135deg, #74ebd5 0%, #4a90e2 100%);
+            color: #0b2c4d;
+        }
+
+        /* ===== Slot 2：湖蓝青色 ===== */
+        .course-card.slot2 {
+            background: linear-gradient(135deg, #a18cd1 0%, #6a82fb 100%);
+            color: #1f1f3a;
+        }
+
+        /* ===== Slot 3：暖橙珊瑚 ===== */
+        .course-card.slot3 {
+            background: linear-gradient(135deg, #ffd6a5 0%, #ff7b7b 100%);
+            color: #3b1f1f;
+        }
+
+        /* ===== Slot 4：紫蓝梦幻 ===== */
+        .course-card.slot4 {
+            background: linear-gradient(135deg, #5f72be 0%, #9921e8 100%);
+            color: #20263e;
+        }
+
+        /* ===== Slot 5：粉紫柔和 ===== */
+        .course-card.slot5 {
+            background: linear-gradient(135deg, #ffb3d9 0%, #d98cff 100%);
+            color: #2d1b2f;
+        }
+
+        .course-student {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            opacity: 0.95;
+        }
+
+        .course-title {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .course-time-badge {
+            background: #0000001a;
+            color: #000000;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 15px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .today-highlight {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
+        }
+
+        .today-highlight::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 10px;
+            height: 10px;
+            background: #ff5722;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(255, 87, 34, 0.6);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #333;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 18px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-content {
+                text-align: center;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+            }
+            
+            .time-cell {
+                width: 80px;
+                font-size: 12px;
+            }
+            
+            .day-cell {
+                min-width: 60px;
+                min-height: 70px;
+            }
+            
+            .course-card {
+                padding: 8px;
+            }
+            
+            .course-student {
+                font-size: 11px;
+            }
+            
+            .course-title {
+                font-size: 10px;
+            }
+            
+            .course-time-badge {
+                font-size: 9px;
+                padding: 3px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>老师课表</h1>
+                <p id="currentDate"></p>
+            </div>
+            <button class="add-btn" onclick="showAddModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                添加课程
+            </button>
+        </div>
+
+        <div class="week-section">
+            <div class="week-title">
+                <span class="week-badge">本周</span>
+                <span id="week1Date"></span>
+            </div>
+            <div class="schedule-table" id="week1Schedule">
+            </div>
+        </div>
+
+        <div class="week-section">
+            <div class="week-title">
+                <span class="week-badge">下周</span>
+                <span id="week2Date"></span>
+            </div>
+            <div class="schedule-table" id="week2Schedule">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addModalOverlay" onclick="closeAddModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>添加课程</h2>
+            
+            <div class="form-group">
+                <label>日期</label>
+                <select id="modalDate">
+                    <option value="">请选择日期</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>学生姓名</label>
+                <input type="text" id="modalStudent" placeholder="请输入学生姓名">
+            </div>
+
+            <div class="form-group">
+                <label>上课时间</label>
+                <select id="modalTimeSlot">
+                    <option value="" disabled selected>请选择上课时间</option>
+                    <option value="1">10:00-12:00</option>
+                    <option value="2">14:00-16:00</option>
+                    <option value="3">16:00-18:00</option>
+                    <option value="4">18:00-20:00</option>
+                    <option value="5">其他时间段</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>课程：</label>
+                <div class="modalCourse">
+                    <select id="classSchedule">
+                        <option value="" disabled selected>请选择课程</option>
+                        <option value="PET">PET</option>
+                        <option value="雅思口语">雅思口语</option>
+                        <option value="雅思口语班课">雅思口语班课</option>
+                        <option value="雅思写作">雅思写作</option>
+                        <option value="雅思1V3">雅思1V3</option>
+                        <option value="面试课">面试课</option>
+                        <option value="雅思1V2">雅思1V2</option>
+                        <option value="小纵队雅思口语">小纵队雅思口语</option>
+                        <option value="雅思读写">雅思读写</option>
+                        <option value="雅思写作班课">雅思写作班课</option>
+                        <option value="其他网课">其他网课</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeAddModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveCourse()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="viewModalOverlay" onclick="closeViewModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 id="viewModalTitle">课程信息</h2>
+
+            <div class="view-info" id="viewInfo">
+                <div class="info-item">
+                    <label>日期：</label>
+                    <span id="viewDate"></span>
+                </div>
+                <div class="info-item">
+                    <label>学生姓名：</label>
+                    <span id="viewStudent"></span>
+                </div>
+                <div class="info-item">
+                    <label>课程名称：</label>
+                    <span id="viewCourse"></span>
+                </div>
+                <div class="info-item">
+                    <label>上课时间：</label>
+                    <span id="viewTime"></span>
+                </div>
+            </div>
+
+            <div class="edit-form" id="editForm" style="display: none;">
+                <div class="form-group">
+                    <label>学生姓名</label>
+                    <input type="text" id="editStudent" placeholder="请输入学生姓名">
+                </div>
+
+                <div class="form-group">
+                    <label>上课时间</label>
+                    <select id="editTimeSlot">
+                        <option value="1">10:00-12:00</option>
+                        <option value="2">14:00-16:00</option>
+                        <option value="3">16:00-18:00</option>
+                        <option value="4">18:00-20:00</option>
+                        <option value="5">其他时间段</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>课程：</label>
+                    <select id="editCourse">
+                        <option value="PET">PET</option>
+                        <option value="雅思口语">雅思口语</option>
+                        <option value="雅思口语班课">雅思口语班课</option>
+                        <option value="雅思写作">雅思写作</option>
+                        <option value="雅思1V3">雅思1V3</option>
+                        <option value="面试课">面试课</option>
+                        <option value="雅思1V2">雅思1V2</option>
+                        <option value="小纵队雅思口语">小纵队雅思口语</option>
+                        <option value="雅思读写">雅思读写</option>
+                        <option value="雅思写作班课">雅思写作班课</option>
+                        <option value="其他网课">其他网课</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-buttons" id="viewButtons">
+                <button class="btn btn-secondary" onclick="closeViewModal()">关闭</button>
+                <button class="btn btn-primary" onclick="enableEdit()">编辑</button>
+                <button class="btn btn-danger" onclick="deleteCourse()">删除</button>
+            </div>
+
+            <div class="modal-buttons" id="editButtons" style="display: none;">
+                <button class="btn btn-secondary" onclick="cancelEdit()">取消</button>
+                <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .view-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item label {
+            font-weight: 600;
+            color: #555;
+            width: 100px;
+        }
+
+        .info-item span {
+            color: #333;
+            flex: 1;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+        }
+    </style>
+
+    <script>
+        let courses = [];
+        let courseIdCounter = 1;
+        let currentEditId = null;
+        const colors = ['', 'blue', 'green', 'orange', 'purple', 'pink', 'red'];
+        const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        let currentWeekDates = [];
+        let nextWeekDates = [];
+
+        function getWeekDates(startDate) {
+            const dates = [];
+            const d = new Date(startDate);
+            for (let i = 0; i < 7; i++) {
+                dates.push({
+                    dayOfWeek: i,
+                    date: d.getDate(),
+                    month: d.getMonth() + 1,
+                    year: d.getFullYear(),
+                    isToday: isToday(d),
+                    fullDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                });
+                d.setDate(d.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.getDate() === today.getDate() &&
+                   date.getMonth() === today.getMonth() &&
+                   date.getFullYear() === today.getFullYear();
+        }
+
+        function getMonday(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function formatDateRange(dates) {
+            const first = dates[0];
+            const last = dates[dates.length - 1];
+            if (first.month === last.month) {
+                return `${first.month}月${first.date}-${last.date}日`;
+            }
+            return `${first.month}月${first.date}日-${last.month}月${last.date}日`;
+        }
+
+        function createScheduleTable(weekDates, weekOffset = 0) {
+            let html = '';
+
+            html += '<div class="schedule-row schedule-header-row">';
+            html += '<div class="schedule-cell time-cell"></div>';
+            weekDates.forEach((dayInfo) => {
+                html += `<div class="schedule-cell">${weekDays[dayInfo.dayOfWeek]}<br><small style="font-weight:400;font-size:11px;color:#888">${dayInfo.month}/${dayInfo.date}</small></div>`;
+            });
+            html += '</div>';
+
+            const timeSlots = [
+                { key: 'am', label: '上午' },
+                { key: 'pm', label: '下午' },
+            ];
+
+            timeSlots.forEach((slot) => {
+                html += `<div class="schedule-row">`;
+                html += `<div class="schedule-cell time-cell">${slot.label}</div>`;
+
+                weekDates.forEach((dayInfo) => {
+                    let isToday = dayInfo.isToday && weekOffset === 0;
+                    let dayCourses = courses.filter(c => {
+                        const isAM = c.timeSlot === '1';
+                        const courseTimeSlot = isAM ? 'am' : 'pm';
+                        return c.dayOfWeek === dayInfo.dayOfWeek &&
+                               courseTimeSlot === slot.key &&
+                               c.weekOffset === weekOffset;
+                    });
+
+                    if (dayCourses.length > 0) {
+                        html += `<div class="schedule-cell day-cell ${isToday ? 'today-highlight' : ''}">`;
+                        dayCourses.forEach((course, idx) => {
+                            const slotClass = `slot${course.timeSlot}`;
+                            html += `
+                                <div class="course-card ${slotClass}" onclick="showCourseDetail(${course.id})">
+                                    <div class="course-student">${course.studentName}</div>
+                                    <div class="course-title">${course.courseName}</div>
+                                    <div class="course-time-badge">${course.timeSlotLabel || course.timeSlot}</div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    } else {
+                        html += `<div class="schedule-cell day-cell empty ${isToday ? 'today-highlight' : ''}"></div>`;
+                    }
+                });
+
+                html += '</div>';
+            });
+
+            return html;
+        }
+
+        function showAddModal() {
+            const select = document.getElementById('modalDate');
+            select.innerHTML = '<option value="">请选择日期</option>';
+            
+            const allDates = [...currentWeekDates.map(d => ({...d, weekOffset: 0})), ...nextWeekDates.map(d => ({...d, weekOffset: 1}))];
+            allDates.forEach((dayInfo) => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify({dayOfWeek: dayInfo.dayOfWeek, weekOffset: dayInfo.weekOffset});
+                option.textContent = `${dayInfo.month}月${dayInfo.date}日 ${weekDays[dayInfo.dayOfWeek]}`;
+                select.appendChild(option);
+            });
+
+            document.getElementById('addModalOverlay').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModalOverlay').classList.remove('active');
+            document.getElementById('modalDate').value = '';
+            document.getElementById('modalStudent').value = '';
+            document.getElementById('modalTimeSlot').value = '1';
+            document.getElementById('classSchedule').value = '';
+        }
+
+        const timeSlotLabels = {
+            '1': '10:00-12:00',
+            '2': '14:00-16:00',
+            '3': '16:00-18:00',
+            '4': '18:00-20:00',
+            '5': '其他时间段'
+        };
+
+        function saveCourse() {
+            const dateStr = document.getElementById('modalDate').value;
+            const studentName = document.getElementById('modalStudent').value.trim();
+            const timeSlot = document.getElementById('modalTimeSlot').value;
+            const courseName = document.getElementById('classSchedule').value;
+
+            if (!dateStr || !studentName || !courseName || !timeSlot) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            const dateInfo = JSON.parse(dateStr);
+
+            courses.push({
+                id: courseIdCounter++,
+                dayOfWeek: dateInfo.dayOfWeek,
+                weekOffset: dateInfo.weekOffset,
+                timeSlot: timeSlot,
+                timeSlotLabel: timeSlotLabels[timeSlot] || timeSlot,
+                studentName: studentName,
+                courseName: courseName
+            });
+
+            updateSchedule();
+            closeAddModal();
+        }
+
+        function updateSchedule() {
+            document.getElementById('week1Schedule').innerHTML = createScheduleTable(currentWeekDates, 0);
+            document.getElementById('week2Schedule').innerHTML = createScheduleTable(nextWeekDates, 1);
+        }
+
+        function getCourseDateStr(course) {
+            let weekDates = course.weekOffset === 0 ? currentWeekDates : nextWeekDates;
+            let dayInfo = weekDates.find(d => d.dayOfWeek === course.dayOfWeek);
+            if (dayInfo) {
+                return `${dayInfo.month}月${dayInfo.date}日 ${weekDays[dayInfo.dayOfWeek]}`;
+            }
+            return '';
+        }
+
+        function showCourseDetail(id) {
+            const course = courses.find(c => c.id === id);
+            if (!course) return;
+
+            currentEditId = id;
+
+            document.getElementById('viewDate').textContent = getCourseDateStr(course);
+            document.getElementById('viewStudent').textContent = course.studentName;
+            document.getElementById('viewCourse').textContent = course.courseName;
+            document.getElementById('viewTime').textContent = course.timeSlotLabel;
+
+            document.getElementById('viewInfo').style.display = 'block';
+            document.getElementById('editForm').style.display = 'none';
+            document.getElementById('viewButtons').style.display = 'flex';
+            document.getElementById('editButtons').style.display = 'none';
+            document.getElementById('viewModalTitle').textContent = '课程信息';
+
+            document.getElementById('viewModalOverlay').classList.add('active');
+        }
+
+        function enableEdit() {
+            const course = courses.find(c => c.id === currentEditId);
+            if (!course) return;
+
+            document.getElementById('editStudent').value = course.studentName;
+            document.getElementById('editTimeSlot').value = course.timeSlot;
+            document.getElementById('editCourse').value = course.courseName;
+
+            document.getElementById('viewInfo').style.display = 'none';
+            document.getElementById('editForm').style.display = 'block';
+            document.getElementById('viewButtons').style.display = 'none';
+            document.getElementById('editButtons').style.display = 'flex';
+            document.getElementById('viewModalTitle').textContent = '编辑课程';
+        }
+
+        function cancelEdit() {
+            showCourseDetail(currentEditId);
+        }
+
+        function saveEdit() {
+            const studentName = document.getElementById('editStudent').value.trim();
+            const timeSlot = document.getElementById('editTimeSlot').value;
+            const courseName = document.getElementById('editCourse').value;
+
+            if (!studentName || !courseName) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            const courseIndex = courses.findIndex(c => c.id === currentEditId);
+            if (courseIndex !== -1) {
+                courses[courseIndex].studentName = studentName;
+                courses[courseIndex].timeSlot = timeSlot;
+                courses[courseIndex].timeSlotLabel = timeSlotLabels[timeSlot] || timeSlot;
+                courses[courseIndex].courseName = courseName;
+            }
+
+            updateSchedule();
+            closeViewModal();
+        }
+
+        function deleteCourse() {
+            if (!confirm('确定要删除这条课程记录吗？')) return;
+
+            courses = courses.filter(c => c.id !== currentEditId);
+            updateSchedule();
+            closeViewModal();
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModalOverlay').classList.remove('active');
+            currentEditId = null;
+        }
+
+        function init() {
+            const today = new Date();
+            const thisWeekStart = getMonday(today);
+            const nextWeekStart = new Date(thisWeekStart);
+            nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+
+            currentWeekDates = getWeekDates(thisWeekStart);
+            nextWeekDates = getWeekDates(nextWeekStart);
+
+            document.getElementById('currentDate').textContent = `当前日期：${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+            document.getElementById('week1Date').textContent = formatDateRange(currentWeekDates);
+            document.getElementById('week2Date').textContent = formatDateRange(nextWeekDates);
+
+            updateSchedule();
+        }
+
+        init();
+    </script>
+</body>
+</html>
